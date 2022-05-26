@@ -180,7 +180,7 @@ def main():
     random.seed(42)
 
     # Tempo para esperar antes de avançar para a próxima iteração
-    SLEEP_TIME = 0.1
+    SLEEP_TIME = 0.05
 
     env_map = Map.from_str(default_map)
     agent = VacummAgent(env_map)
