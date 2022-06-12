@@ -1,16 +1,18 @@
 
 from src.problems import MazeProblem
 from src.viewer import MazeViewer
-from src.search import breadth_first_search
-from src.search import depth_first_search
+from src.search import *
 
 
 def main():
-    maze_problem = MazeProblem(100, 100)
+    maze_problem = MazeProblem(20, 20)
     viewer = MazeViewer(maze_problem, step_time_miliseconds=20, zoom=20)
     visiteds = {}
+    #path, cost = breadth_first_search(maze_problem, viewer, visiteds)
     #path, cost = depth_first_search(maze_problem, viewer, visiteds)
-    path, cost = depth_first_search(maze_problem, viewer, visiteds)
+
+    #path, cost = a_star_search(maze_problem, viewer)
+    path, cost = uniform_search(maze_problem, viewer)
 
     if len(path) == 0:
         print("Goal is unreachable for this maze.")

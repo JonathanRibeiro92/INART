@@ -18,7 +18,7 @@ class ProblemInterface(ABC):
         """ Return the cost of performing an action in state and achieving a next state. """
 
     @abstractmethod
-    def heuristic_cost(self, state) -> float:
+    def heuristic_cost(self, state, h) -> float:
         """ Return the estimated cost from the state to a goal state. """
 
     @abstractmethod
@@ -80,8 +80,10 @@ class MazeProblem(ProblemInterface):
                   ) -> float:
         return self._cell_distance(state, next_state)
 
-    def heuristic_cost(self, state: Tuple[int, int]) -> float:
-        return self._cell_distance(state, self._goal_state)
+    def heuristic_cost(self, state: Tuple[int, int], h = 'e') -> float:
+        if h == 'e':
+            return self._cell_distance(state, self._goal_state)
+        return self.manhattan(state, self._goal_state)
 
     def initial_state(self) -> Tuple[int, int]:
         return self._initial_state
@@ -109,3 +111,7 @@ class MazeProblem(ProblemInterface):
     def _cell_distance(self, cell_1: Tuple[int, int], cell_2: Tuple[int, int]) -> float:
         """ Return the euclidean distance between two cells. """
         return ((cell_1[0] - cell_2[0]) ** 2 + (cell_1[1] - cell_2[1]) ** 2) ** 0.5
+
+    def manhattan(self, point: Tuple[int, int], point2: Tuple[int, int]) -> float:
+        return abs(point[0] - point2[0]) + abs(
+            point[1] - point2[0])

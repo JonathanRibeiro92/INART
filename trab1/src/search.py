@@ -1,12 +1,11 @@
-from math import inf
-
 from collections import deque
-from typing import Any, List, Union, Tuple
+from math import inf
+from typing import Any, List, Union, Tuple, Dict, Optional
 
-from src.problems import ProblemInterface
-from src.viewer import ViewerInterface
+from numpy import Infinity
 
-from src.problems import heuristic_cost
+from trab1.src.problems import ProblemInterface
+from trab1.src.viewer import ViewerInterface
 
 
 class Node:
@@ -124,23 +123,23 @@ def depth_first_search(problem: ProblemInterface, viewer: ViewerInterface,
     # variable to store the goal node when it is found.
     goal_found = None
 
-    while to_explore:
+    while to_explore and not goal_found:
         # select next node or expansion
-        state_node = to_explore.popleft()
+        state_node = to_explore.pop()
 
-        if state_node in visiteds:
+        if state_node in visiteds or state_node in to_explore:
             continue
+
+        if problem.is_goal(state_node.state):
+            goal_found = state_node
+            break
 
         visiteds[state_node] = True
 
         neighbors = _generate_neighbors(state_node, problem)
-        for i in reversed(range(len(neighbors))):
-            u = neighbors[i]
-            if u not in visiteds:
-                if problem.is_goal(u.state):
-                    goal_found = u
-                    break
-                to_explore.append(u)
+        for neighbor in neighbors:
+            if neighbor not in visiteds and neighbor not in to_explore:
+                to_explore.append(neighbor)
 
         viewer.update(state_node.state,
                       generated=to_explore,
@@ -152,40 +151,113 @@ def depth_first_search(problem: ProblemInterface, viewer: ViewerInterface,
     return path, cost
 
 
-def a_star_search(problem: ProblemInterface, viewer: ViewerInterface) -> Tuple[
-    List[Any], float]:
+def a_star_search(problem: ProblemInterface, viewer: ViewerInterface) -> \
+        Tuple[List[Node], float]:
     start_node = Node(problem.initial_state())
     frontier = deque()
-    frontier.append((start_node, 0))
-    visiteds: dict[Node] = {}
-    cost_visiteds: dict[Node, float] = {}
+    frontier.append(start_node)
+    visiteds: Dict[Node, Optional[Node]] = {}
+    cost_g: Dict[Node, float] = {}
+    cost_f: Dict[Node, float] = {}
 
     visiteds[start_node] = None
-    cost_visiteds[start_node] = 0
+    cost_g[start_node] = 0
+    cost_f[start_node] = problem.heuristic_cost(
+        start_node.state)
+    goal_node = None
 
     while frontier:
-        current_node = frontier.pop()
+        current_node: Node = min(frontier, key=lambda x: cost_f[x])
 
         if problem.is_goal(current_node.state):
+            goal_node = current_node
             break
+
+        frontier.remove(current_node)
 
         neighbors = _generate_neighbors(current_node, problem)
 
         for neighbor in neighbors:
-            new_cost = cost_visiteds[current_node] + problem.heuristic_cost(
-                current_node.state)
+            if neighbor not in cost_f:
+                cost_f[neighbor] = Infinity
+                cost_g[neighbor] = Infinity
 
-            if neighbor not in cost_visiteds or new_cost < cost_visiteds[
+            new_cost = cost_g[current_node] + problem.step_cost(
+                state=current_node.state,
+                action=None,
+                next_state=neighbor.state)
+
+            if neighbor not in visiteds or new_cost < cost_g[
                 neighbor]:
-                cost_visiteds[neighbor] = new_cost
-                neighbor_accumulated_cost = new_cost + \
-                                            problem.heuristic_cost(
-                                                neighbor.state)
-                frontier.append((neighbor, neighbor_accumulated_cost))
+
+                cost_g[neighbor] = new_cost
+                cost_f[neighbor] = new_cost + problem.heuristic_cost(
+                    neighbor.state, h='m')
+                frontier.append(neighbor)
                 visiteds[neighbor] = current_node
+
+                if neighbor not in frontier:
+                    frontier.append(neighbor)
 
         viewer.update(current_node.state,
                       generated=frontier,
                       expanded=visiteds)
 
-    return visiteds, sum(cost_visiteds.values())
+    path = _extract_path(goal_node)
+    cost = _path_cost(problem, path)
+
+    return path, cost
+
+
+def uniform_search(problem: ProblemInterface, viewer: ViewerInterface) -> \
+        Tuple[List[Node], float]:
+    start_node = Node(problem.initial_state())
+    frontier = deque()
+    frontier.append(start_node)
+    visiteds: Dict[Node, Optional[Node]] = {}
+    cost_g: Dict[Node, float] = {}
+
+
+    visiteds[start_node] = None
+    cost_g[start_node] = 0
+
+    goal_node = None
+
+    while frontier:
+        current_node: Node = min(frontier, key=lambda x: cost_g[x])
+
+        if problem.is_goal(current_node.state):
+            goal_node = current_node
+            break
+
+        frontier.remove(current_node)
+
+        neighbors = _generate_neighbors(current_node, problem)
+
+        for neighbor in neighbors:
+            if neighbor not in cost_g:
+                cost_g[neighbor] = Infinity
+
+            new_cost = cost_g[current_node] + problem.step_cost(
+                state=current_node.state,
+                action=None,
+                next_state=neighbor.state)
+
+            if neighbor not in visiteds or new_cost < cost_g[
+                neighbor]:
+
+                cost_g[neighbor] = new_cost
+                frontier.append(neighbor)
+                visiteds[neighbor] = current_node
+
+                if neighbor not in frontier:
+                    frontier.append(neighbor)
+
+        viewer.update(current_node.state,
+                      generated=frontier,
+                      expanded=visiteds)
+
+    path = _extract_path(goal_node)
+    cost = _path_cost(problem, path)
+
+    return path, cost
