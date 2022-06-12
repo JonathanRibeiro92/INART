@@ -3,7 +3,7 @@ from abc import ABC, abstractclassmethod
 import cv2
 import numpy as np
 
-from src.problems import MazeProblem
+from trab1.src.problems import MazeProblem
 
 
 class ViewerInterface(ABC):

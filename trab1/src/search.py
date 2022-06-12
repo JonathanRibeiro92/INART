@@ -109,16 +109,21 @@ def _generate_neighbors(state_node: Node, problem: ProblemInterface) -> List[
     return neighbors
 
 
-def depth_first_search(problem: ProblemInterface, viewer: ViewerInterface,
-                       visiteds: dict
-                       ) -> Tuple[List[Any], float]:
+def depth_first_search(problem: ProblemInterface, viewer: ViewerInterface = None
+                       ) -> Tuple[List[Any], float, float, float]:
     # generated nodes that were not expanded yet
-    to_explore = deque()
+    to_explore = set()
+
+    n_generated = 0
+    n_expanded = 0
 
     # add the starting node to the list of nodes
     # yet to be expanded.
     state_node = Node(problem.initial_state())
-    to_explore.append(state_node)
+    to_explore.add(state_node)
+
+    # nodes whose neighbors were already generated
+    visiteds = set()
 
     # variable to store the goal node when it is found.
     goal_found = None
@@ -132,35 +137,45 @@ def depth_first_search(problem: ProblemInterface, viewer: ViewerInterface,
 
         if problem.is_goal(state_node.state):
             goal_found = state_node
-            break
 
-        visiteds[state_node] = True
+            break
+        visiteds.add(state_node)
 
         neighbors = _generate_neighbors(state_node, problem)
         for neighbor in neighbors:
             if neighbor not in visiteds and neighbor not in to_explore:
-                to_explore.append(neighbor)
+                to_explore.add(neighbor)
+                n_generated+=1
 
-        viewer.update(state_node.state,
-                      generated=to_explore,
-                      expanded=visiteds)
+        if viewer is not None:
+            viewer.update(state_node.state,
+                          generated=to_explore,
+                          expanded=visiteds)
 
     path = _extract_path(goal_found)
     cost = _path_cost(problem, path)
+    n_expanded = len(visiteds)
 
-    return path, cost
+    return path, cost, n_generated, n_expanded
 
 
-def a_star_search(problem: ProblemInterface, viewer: ViewerInterface) -> \
-        Tuple[List[Node], float]:
+def a_star_search(problem: ProblemInterface, viewer: ViewerInterface = None) \
+        -> \
+        Tuple[List[Node], float, float, float]:
     start_node = Node(problem.initial_state())
-    frontier = deque()
-    frontier.append(start_node)
-    visiteds: Dict[Node, Optional[Node]] = {}
+    frontier = set()
+    frontier.add(start_node)
+
+    n_generated = 0
+    n_expanded = 0
+
+    # nodes whose neighbors were already generated
+    visiteds = set()
+
     cost_g: Dict[Node, float] = {}
     cost_f: Dict[Node, float] = {}
 
-    visiteds[start_node] = None
+
     cost_g[start_node] = 0
     cost_f[start_node] = problem.heuristic_cost(
         start_node.state)
@@ -192,33 +207,41 @@ def a_star_search(problem: ProblemInterface, viewer: ViewerInterface) -> \
 
                 cost_g[neighbor] = new_cost
                 cost_f[neighbor] = new_cost + problem.heuristic_cost(
-                    neighbor.state, h='m')
-                frontier.append(neighbor)
-                visiteds[neighbor] = current_node
+                    neighbor.state)
+
+                visiteds.add(current_node)
+                n_expanded+=1
 
                 if neighbor not in frontier:
-                    frontier.append(neighbor)
-
-        viewer.update(current_node.state,
-                      generated=frontier,
-                      expanded=visiteds)
+                    frontier.add(neighbor)
+                    n_generated+=1
+        if viewer is not None:
+            viewer.update(current_node.state,
+                          generated=frontier,
+                          expanded=visiteds)
 
     path = _extract_path(goal_node)
     cost = _path_cost(problem, path)
 
-    return path, cost
+    return path, cost, n_generated, n_expanded
 
 
-def uniform_search(problem: ProblemInterface, viewer: ViewerInterface) -> \
-        Tuple[List[Node], float]:
+def uniform_search(problem: ProblemInterface, viewer: ViewerInterface = None) \
+        -> \
+        Tuple[List[Node], float, float, float]:
     start_node = Node(problem.initial_state())
-    frontier = deque()
-    frontier.append(start_node)
-    visiteds: Dict[Node, Optional[Node]] = {}
+    frontier = set()
+    frontier.add(start_node)
+
+    n_generated = 0
+    n_expanded = 0
+
+    # nodes whose neighbors were already generated
+    visiteds = set()
+
     cost_g: Dict[Node, float] = {}
 
 
-    visiteds[start_node] = None
     cost_g[start_node] = 0
 
     goal_node = None
@@ -247,17 +270,19 @@ def uniform_search(problem: ProblemInterface, viewer: ViewerInterface) -> \
                 neighbor]:
 
                 cost_g[neighbor] = new_cost
-                frontier.append(neighbor)
-                visiteds[neighbor] = current_node
+                visiteds.add(current_node)
+                n_expanded+=1
 
                 if neighbor not in frontier:
-                    frontier.append(neighbor)
+                    frontier.add(neighbor)
+                    n_generated+=1
 
-        viewer.update(current_node.state,
-                      generated=frontier,
-                      expanded=visiteds)
+        if viewer is not None:
+            viewer.update(current_node.state,
+                          generated=frontier,
+                          expanded=visiteds)
 
     path = _extract_path(goal_node)
     cost = _path_cost(problem, path)
 
-    return path, cost
+    return path, cost, n_generated, n_expanded
