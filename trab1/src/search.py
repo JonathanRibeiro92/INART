@@ -112,7 +112,7 @@ def _generate_neighbors(state_node: Node, problem: ProblemInterface) -> List[
 def depth_first_search(problem: ProblemInterface, viewer: ViewerInterface = None
                        ) -> Tuple[List[Any], float, float, float]:
     # generated nodes that were not expanded yet
-    to_explore = set()
+    to_explore = deque()
 
     n_generated = 0
     n_expanded = 0
@@ -120,7 +120,7 @@ def depth_first_search(problem: ProblemInterface, viewer: ViewerInterface = None
     # add the starting node to the list of nodes
     # yet to be expanded.
     state_node = Node(problem.initial_state())
-    to_explore.add(state_node)
+    to_explore.append(state_node)
 
     # nodes whose neighbors were already generated
     visiteds = set()
@@ -130,7 +130,7 @@ def depth_first_search(problem: ProblemInterface, viewer: ViewerInterface = None
 
     while to_explore and not goal_found:
         # select next node or expansion
-        state_node = to_explore.pop()
+        state_node = to_explore.popleft()
 
         if state_node in visiteds or state_node in to_explore:
             continue
@@ -139,12 +139,12 @@ def depth_first_search(problem: ProblemInterface, viewer: ViewerInterface = None
             goal_found = state_node
 
             break
-        visiteds.add(state_node)
 
         neighbors = _generate_neighbors(state_node, problem)
         for neighbor in neighbors:
             if neighbor not in visiteds and neighbor not in to_explore:
-                to_explore.add(neighbor)
+                visiteds.add(state_node)
+                to_explore.append(neighbor)
                 n_generated+=1
 
         if viewer is not None:
